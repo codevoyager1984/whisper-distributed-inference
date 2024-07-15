@@ -1,21 +1,19 @@
+import asyncio
 import os
 from loguru import logger
 from dotenv import load_dotenv
-from conductor.client.worker.worker_task import worker_task
-from conductor.client.automator.task_handler import TaskHandler
-from conductor.client.configuration.configuration import Configuration
+from conductor_client import ConductorClient
 from vastai import VastAPIClient
 
 load_dotenv()
 
 vast_ai_apikey = os.getenv("VAST_AI_API_KEY")
 vast_ai_client = VastAPIClient(vast_ai_apikey)
+conductor_base_url = os.getenv("CONDUCTOR_BASE_URL", "http://localhost:8080/api")
 
 
-@worker_task(task_definition_name="whisper_inference", worker_id="whisper_inference_worker")
-def whisper_inference(task):
-    task_id = task.task_id
-    input_data = task.input_data
+async def whisper_inference(task):
+    input_data = task.get("inputData")
     video_path = input_data.get("video_path")
     logger.info("Start running whisper inference, video_path: {}".format(video_path))
     if not video_path:
@@ -23,18 +21,10 @@ def whisper_inference(task):
     return {"video_path": video_path}
 
 
-def main():
-    api_config = Configuration(
-        debug=True,
-    )
-    task_handler = TaskHandler(
-        workers=[],
-        configuration=api_config,
-        scan_for_annotated_workers=True,
-    )
-    # start worker polling
-    task_handler.start_processes()
+async def main():
+    conductor_client = ConductorClient(base_url=conductor_base_url)
+    await conductor_client.register_worker("whisper_inference", whisper_inference)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
