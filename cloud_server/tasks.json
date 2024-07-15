@@ -1,0 +1,33 @@
+[
+    {
+        "name": "split_video_into_chunks",
+        "description": "Split video into chunks",
+        "retryCount": 0,
+        "timeoutSeconds": 3600,
+        "inputKeys": [],
+        "outputKeys": [],
+        "timeoutPolicy": "TIME_OUT_WF",
+        "retryLogic": "FIXED",
+        "retryDelaySeconds": 60,
+        "responseTimeoutSeconds": 600,
+        "rateLimitPerFrequency": 0,
+        "rateLimitFrequencyInSeconds": 1,
+        "ownerEmail": "codevoyager.jay@gmail.com"
+    },
+    {
+        "name": "whisper_inference",
+        "description": "Whisper Inference",
+        "retryCount": 0,
+        "timeoutSeconds": 3600,
+        "inputKeys": [],
+        "outputKeys": [],
+        "timeoutPolicy": "TIME_OUT_WF",
+        "retryLogic": "FIXED",
+        "retryDelaySeconds": 60,
+        "responseTimeoutSeconds": 600,
+        "rateLimitPerFrequency": 0,
+        "rateLimitFrequencyInSeconds": 1,
+        "ownerEmail": "codevoyager.jay@gmail.com",
+        "concurrentExecLimit": 100
+    }
+]

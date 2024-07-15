@@ -1,0 +1,33 @@
+{
+    "name": "distributed_whisper_inference",
+    "description": "Distributed Whisper Inference",
+    "version": 1,
+    "ownerEmail": "codevoyager.jay@gmail.com",
+    "tasks": [
+        {
+            "name": "split_video_into_chunks",
+            "taskReferenceName": "split_video_into_chunks_ref",
+            "inputParameters": {
+                "video_path": "${workflow.input.video_path}",
+                "seconds_per_chunk": "${workflow.input.seconds_per_chunk}"
+            },
+            "type": "SIMPLE"
+        },
+        {
+            "name": "whisper_inference_dynamic_fork",
+            "taskReferenceName": "whisper_inference_dynamic_fork_ref",
+            "inputParameters": {
+                "dynamicTasks": "${split_video_into_chunks_ref.output.dynamicTasks}",
+                "dynamicTasksInput": "${split_video_into_chunks_ref.output.dynamicTasksInput}"
+            },
+            "type": "FORK_JOIN_DYNAMIC",
+            "dynamicForkTasksParam": "dynamicTasks",
+            "dynamicForkTasksInputParamName": "dynamicTasksInput"
+        },
+        {
+            "name": "whisper_inference_dynamic_fork_join",
+            "taskReferenceName": "whisper_inference_dynamic_fork_join_ref",
+            "type": "JOIN"
+        }
+    ]
+}
