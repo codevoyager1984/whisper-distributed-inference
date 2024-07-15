@@ -33,7 +33,7 @@ class ConductorClient:
         payload = {
             "taskId": task_id,
             "status": status,
-            "output": output or {},
+            "outputData": output or {},
             "workflowInstanceId": workflowInstanceId,
         }
         async with self.session.post(url, json=payload) as response:
