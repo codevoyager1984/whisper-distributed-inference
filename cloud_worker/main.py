@@ -5,24 +5,26 @@ from conductor.client.automator.task_handler import TaskHandler
 from conductor.client.configuration.configuration import Configuration
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from concurrent.futures import ProcessPoolExecutor
+from pydub import AudioSegment
 
 output_folder = "./outputs"
 if not os.path.exists(output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
 
-def split_segment(input_path, start_time, end_time, output_path):
-    video = VideoFileClip(input_path)
-    segment = video.subclip(start_time, end_time)
-    segment.write_videofile(output_path, codec="libx264")
-    video.close()
-    print(f"Segment saved to {output_path}")
+def split_audio(file_path, start_time, end_time, output_path):
+    audio = AudioSegment.from_mp3(file_path)
+    segment = audio[start_time:end_time]
+    segment.export(output_path, format="mp3")
 
 
-def split_video_concurrent(input_path, seconds_per_chunk, output_folder):
-    video = VideoFileClip(input_path)
-    duration = video.duration
-    num_segments = int(duration // seconds_per_chunk) + 1
+def split_audio_concurrent(file_path, seconds_per_chunk, output_folder):
+    audio = AudioSegment.from_mp3(file_path)
+    segment_length_ms = (
+        seconds_per_chunk * 1000
+    )  # Convert segment length to milliseconds
+    total_length_ms = len(audio)
+    num_segments = total_length_ms // segment_length_ms
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -30,22 +32,21 @@ def split_video_concurrent(input_path, seconds_per_chunk, output_folder):
     start = time.time()
     tasks = []
     with ProcessPoolExecutor() as executor:
-        for i in range(num_segments):
-            start_time = i * seconds_per_chunk
-            end_time = min((i + 1) * seconds_per_chunk, duration)
-            output_path = f"{output_folder}/segment_{i+1}.mp4"
+        for i in range(num_segments + 1):
+            start_time = i * segment_length_ms
+            end_time = min((i + 1) * segment_length_ms, total_length_ms)
+            output_path = f"{output_folder}/segment_{i+1}.mp3"
             tasks.append(
                 executor.submit(
-                    split_segment, input_path, start_time, end_time, output_path
+                    split_audio_concurrent, file_path, start_time, end_time, output_path
                 )
             )
 
         for task in tasks:
             task.result()
 
-    video.close()
     end = time.time()
-    logger.info(f"Splitting video took {end - start} seconds")
+    logger.info(f"Splitting audio took {end - start} seconds")
     segment_files = [
         os.path.join(os.path.dirname(__file__), f"{output_folder}/segment_{i+1}.mp4")
         for i in range(num_segments)
@@ -53,30 +54,24 @@ def split_video_concurrent(input_path, seconds_per_chunk, output_folder):
     return segment_files
 
 
-@worker_task(task_definition_name="split_video_into_chunks")
-def split_video_into_chunks(task):
-    # task_id = task.task_id
-    task_id = "2e9008c8-e6fb-4082-8e4b-e8180521d64a"
+@worker_task(task_definition_name="split_audio_into_chunks")
+def split_audio_into_chunks(task):
+    task_id = task.task_id
     input_data = task.input_data
-    video_path = input_data.get("video_path")
-    if not video_path:
-        raise ValueError("video_path is required")
+    audio_path = input_data.get("audio_path")
+    if not audio_path:
+        raise ValueError("audio_path is required")
     seconds_per_chunk = input_data.get("seconds_per_chunk", 60)
 
     logger.info(
-        "Start splitting video into chunks, video_path: {}, seconds_per_chunk: {}".format(
-            video_path, seconds_per_chunk
+        "Start splitting video into chunks, audio_path: {}, seconds_per_chunk: {}".format(
+            audio_path, seconds_per_chunk
         )
     )
     task_output_folder = f"{output_folder}/{task_id}"
-
-    # segment_files = split_video_concurrent(
-    #     video_path, seconds_per_chunk, task_output_folder
-    # )
-    segment_files = [
-        os.path.join(os.path.dirname(__file__), task_output_folder, file)
-        for file in os.listdir(task_output_folder)
-    ]
+    segment_files = split_audio_concurrent(
+        audio_path, seconds_per_chunk, task_output_folder
+    )
     dynamic_tasks = []
     dynamic_tasks_input = {}
 
@@ -85,7 +80,7 @@ def split_video_into_chunks(task):
         dynamic_tasks.append(
             {"name": "whisper_inference", "taskReferenceName": task_ref_name}
         )
-        dynamic_tasks_input[task_ref_name] = {"video_path": segment_file}
+        dynamic_tasks_input[task_ref_name] = {"audio_path": segment_file}
 
     return {
         "dynamicTasks": dynamic_tasks,

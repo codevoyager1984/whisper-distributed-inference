@@ -1,6 +1,6 @@
 import os, json, requests
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request
 from loguru import logger
 
 load_dotenv()
@@ -32,6 +32,14 @@ def run_whisper_inference():
         },
     )
 
+
+@app.route('/api/cacl-estimate-cost-and-time', methods=["GET"])
+def cacl_estimate_cost_and_time():
+    hire_gpu_worker = request.args.get("hire_gpu_worker")
+    
+    # Calculate cost and time
+    tooks_per_chunk_seconds = 60
+    eastimate_cost = 0.1 * int(hire_gpu_worker)
 
 def init_conductor_workflow_and_tasks():
     r = requests.post(f"{conductor_base_url}/metadata/taskdefs", json=task_json)

@@ -18,7 +18,13 @@ async def whisper_inference(task):
     logger.info("Start running whisper inference, video_path: {}".format(video_path))
     if not video_path:
         raise ValueError("video_path is required")
-    return {"video_path": video_path}
+    available_instances = vast_ai_client.list_available_instances(
+        disk_space=100, gpu_total_ram=40960, gpu_ram=40960
+    )
+    cheapest_instance = min(available_instances, key=lambda x: x["search"]["totalHour"])
+    instance_id = cheapest_instance["id"]
+    logger.info("Cheapest instance: {}".format(cheapest_instance))
+    vast_ai_client.launch_instance(instance_id, disk_size=100)
 
 
 async def main():

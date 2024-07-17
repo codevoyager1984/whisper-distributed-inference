@@ -1,7 +1,7 @@
 [
     {
-        "name": "split_video_into_chunks",
-        "description": "Split video into chunks",
+        "name": "split_audio_into_chunks",
+        "description": "Split audio into chunks",
         "retryCount": 0,
         "timeoutSeconds": 3600,
         "inputKeys": [],
